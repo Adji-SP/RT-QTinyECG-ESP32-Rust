@@ -23,7 +23,7 @@
 //! See python/realtime_ecg_simulator.py → class RingBuffer
 
 // Bring in core traits (no_std safe)
-use core::fmt;
+
 
 /// Fixed-size circular ring buffer.
 ///

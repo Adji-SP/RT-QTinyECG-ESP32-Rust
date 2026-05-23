@@ -2,29 +2,24 @@
 # ===================
 # Cargo configuration for ESP32 bare-metal Rust builds.
 #
-# This tells Cargo:
-#   1. Which compilation target to use (Xtensa ESP32 no_std)
-#   2. How to link the firmware binary correctly
-#   3. How to flash using espflash (cargo espflash)
-#
-# The target xtensa-esp32-none-elf is provided by the espup toolchain.
-# It is a bare-metal target: no OS, no std library, no allocator.
+# The `esp` Xtensa Rust toolchain ships rust-src but NOT pre-built
+# Xtensa target libs. We must pass -Zbuild-std to compile core
+# from source. This is done via the [unstable] table.
 
 [build]
-# Default build target: ESP32 bare-metal (no_std)
 target = "xtensa-esp32-none-elf"
 
-[target.xtensa-esp32-none-elf]
-# Use espflash as the runner so "cargo run" also flashes + monitors
-runner = "espflash flash --monitor"
+# Build core + compiler_builtins from bundled rust-src.
+# Required because the esp toolchain on Windows does not ship
+# pre-compiled libs for xtensa-esp32-none-elf.
+# Adds ~1-2 min to a clean build; subsequent builds are cached.
+[unstable]
+build-std = ["core", "compiler_builtins"]
+build-std-features = ["compiler-builtins-mem"]
 
-# Linker flags for ESP32:
-# -Tlinkall.x is the linker script provided by esp-hal.
-# It handles flash memory layout, IRAM, DRAM placement.
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --monitor"
 rustflags = [
     "-C", "link-arg=-Tlinkall.x",
 ]
 
-[env]
-# Optional: Set log level for esp-println
-# RUST_LOG = "debug"

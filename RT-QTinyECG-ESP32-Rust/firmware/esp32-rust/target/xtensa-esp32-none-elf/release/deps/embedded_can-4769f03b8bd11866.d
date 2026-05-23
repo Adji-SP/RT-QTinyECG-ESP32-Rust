@@ -1,0 +1,10 @@
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32-none-elf\release\deps\embedded_can-4769f03b8bd11866.d: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\blocking.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\nb.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\id.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32-none-elf\release\deps\libembedded_can-4769f03b8bd11866.rlib: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\blocking.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\nb.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\id.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32-none-elf\release\deps\libembedded_can-4769f03b8bd11866.rmeta: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\blocking.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\nb.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\id.rs
+
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\lib.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\blocking.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\nb.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-can-0.4.1\src\id.rs:

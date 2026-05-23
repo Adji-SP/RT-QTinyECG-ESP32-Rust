@@ -1,0 +1,10 @@
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\release\deps\somni_parser-caa4da87dc1752d2.d: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\ast.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lexer.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\parser.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\release\deps\libsomni_parser-caa4da87dc1752d2.rlib: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\ast.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lexer.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\parser.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\release\deps\libsomni_parser-caa4da87dc1752d2.rmeta: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\ast.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lexer.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\parser.rs
+
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lib.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\ast.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\lexer.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\somni-parser-0.2.2\src\parser.rs:

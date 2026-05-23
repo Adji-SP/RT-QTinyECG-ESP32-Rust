@@ -1,0 +1,5 @@
+row,col,row_label,col_label,count
+0,0,Normal,Normal,1373
+0,1,Normal,Abnormal,0
+1,0,Abnormal,Normal,1000
+1,1,Abnormal,Abnormal,0

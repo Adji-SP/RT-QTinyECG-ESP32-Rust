@@ -1,0 +1,10 @@
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32-none-elf\release\deps\xtensa_lx-dc086b93c6f9cf9c.d: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\interrupt.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\timer.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\macros.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32-none-elf\release\deps\libxtensa_lx-dc086b93c6f9cf9c.rlib: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\interrupt.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\timer.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\macros.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32-none-elf\release\deps\libxtensa_lx-dc086b93c6f9cf9c.rmeta: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\interrupt.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\timer.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\macros.rs
+
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\lib.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\interrupt.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\timer.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\xtensa-lx-0.13.0\src\macros.rs:

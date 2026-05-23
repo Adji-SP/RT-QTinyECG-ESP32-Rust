@@ -1,0 +1,11 @@
+iteration,old_accuracy,new_accuracy,note
+1,0.578,0.608,placeholder — run fine_tune_model.py to get real data
+2,0.578,0.6379999999999999,placeholder — run fine_tune_model.py to get real data
+3,0.578,0.6679999999999999,placeholder — run fine_tune_model.py to get real data
+4,0.578,0.698,placeholder — run fine_tune_model.py to get real data
+5,0.578,0.728,placeholder — run fine_tune_model.py to get real data
+6,0.578,0.758,placeholder — run fine_tune_model.py to get real data
+7,0.578,0.7879999999999999,placeholder — run fine_tune_model.py to get real data
+8,0.578,0.818,placeholder — run fine_tune_model.py to get real data
+9,0.578,0.848,placeholder — run fine_tune_model.py to get real data
+10,0.578,0.8779999999999999,placeholder — run fine_tune_model.py to get real data

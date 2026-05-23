@@ -1,0 +1,9 @@
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\release\deps\esp_metadata_generated-c9c3c4b50ced0a36.d: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_generated_esp32.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_build_script_utils.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\release\deps\libesp_metadata_generated-c9c3c4b50ced0a36.rlib: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_generated_esp32.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_build_script_utils.rs
+
+D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\release\deps\libesp_metadata_generated-c9c3c4b50ced0a36.rmeta: C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\lib.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_generated_esp32.rs C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_build_script_utils.rs
+
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\lib.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_generated_esp32.rs:
+C:\Users\Karma\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\esp-metadata-generated-0.4.0\src\_build_script_utils.rs:
