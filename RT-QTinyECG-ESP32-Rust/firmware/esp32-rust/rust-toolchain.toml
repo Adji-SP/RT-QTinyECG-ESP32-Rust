@@ -1,0 +1,26 @@
+# rust-toolchain.toml
+# ====================
+# Pins the Rust toolchain version for this project.
+# esp-hal requires the Xtensa-specific Rust fork provided by espup.
+#
+# HOW TO SET UP:
+#   1. Install espup:     cargo install espup
+#   2. Install toolchain: espup install
+#   3. Source environment (Linux/macOS): source ~/export-esp.sh
+#      On Windows: . $HOME/export-esp.ps1
+#
+# After espup install, the channel "esp" becomes available.
+# This file pins the project to that channel automatically.
+#
+# If you get "error: override 'esp' is not installed", re-run: espup install
+
+[toolchain]
+channel  = "esp"
+# Uncomment and specify a version if you need an exact toolchain:
+# channel = "nightly-2024-06-01"
+
+# Targets needed for ESP32 (Xtensa LX6 core):
+targets = [
+    "xtensa-esp32-none-elf",    # no_std bare-metal (this project uses this)
+    # "xtensa-esp32-espidf",    # std with ESP-IDF (not needed for no_std)
+]

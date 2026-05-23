@@ -1,0 +1,52 @@
+[package]
+name    = "ecg-esp32"
+version = "0.1.0"
+edition = "2021"
+authors = ["RT-QTinyECG-ESP32-Rust Project"]
+description = "Real-Time Quantized ECG Detection on ESP32 - Educational Prototype"
+license = "MIT"
+readme  = "README_FIRMWARE.md"
+
+# ── esp-hal configuration ─────────────────────────────────────────────────────
+# NOTE: esp-hal APIs change between versions. This targets esp-hal 0.18.x.
+# If you are using a different version, some imports or function calls may
+# need adjustment. See README_FIRMWARE.md for version-specific notes.
+
+[dependencies]
+# ESP32 Hardware Abstraction Layer (no_std, no_main)
+esp-hal = { version = "0.18", features = ["esp32"] }
+
+# ESP32 runtime (panic handler, interrupt handling)
+esp-backtrace = { version = "0.13", features = [
+    "esp32",
+    "exception-handler",
+    "panic-handler",
+    "println",
+] }
+
+# Print macros over UART (no_std compatible)
+esp-println = { version = "0.10", features = ["esp32", "uart"] }
+
+# Embedded HAL traits (used for GPIO, ADC abstractions)
+embedded-hal = "1.0"
+
+# Optional: nb (non-blocking HAL traits) for ADC read retry
+nb = "1.1"
+
+# ── Build profile ─────────────────────────────────────────────────────────────
+[profile.dev]
+opt-level = "s"    # Optimize for size in debug builds
+debug = true
+
+[profile.release]
+opt-level = "s"    # Size optimization (important for embedded)
+debug = false
+lto = true         # Link-Time Optimization to reduce binary size
+codegen-units = 1  # Better optimization
+
+# ── Binary configuration ──────────────────────────────────────────────────────
+[[bin]]
+name             = "ecg-esp32"
+path             = "src/main.rs"
+test             = false
+bench            = false

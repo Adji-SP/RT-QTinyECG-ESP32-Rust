@@ -1,0 +1,30 @@
+# .cargo/config.toml
+# ===================
+# Cargo configuration for ESP32 bare-metal Rust builds.
+#
+# This tells Cargo:
+#   1. Which compilation target to use (Xtensa ESP32 no_std)
+#   2. How to link the firmware binary correctly
+#   3. How to flash using espflash (cargo espflash)
+#
+# The target xtensa-esp32-none-elf is provided by the espup toolchain.
+# It is a bare-metal target: no OS, no std library, no allocator.
+
+[build]
+# Default build target: ESP32 bare-metal (no_std)
+target = "xtensa-esp32-none-elf"
+
+[target.xtensa-esp32-none-elf]
+# Use espflash as the runner so "cargo run" also flashes + monitors
+runner = "espflash flash --monitor"
+
+# Linker flags for ESP32:
+# -Tlinkall.x is the linker script provided by esp-hal.
+# It handles flash memory layout, IRAM, DRAM placement.
+rustflags = [
+    "-C", "link-arg=-Tlinkall.x",
+]
+
+[env]
+# Optional: Set log level for esp-println
+# RUST_LOG = "debug"

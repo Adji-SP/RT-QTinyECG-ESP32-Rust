@@ -1,0 +1,23 @@
+# RT-QTinyECG-ESP32-Rust - Python Requirements
+# Install with: pip install -r requirements.txt
+
+# Core numerical computing
+numpy>=1.24.0
+
+# Signal processing
+scipy>=1.10.0
+
+# Machine learning (lightweight, no GPU required)
+scikit-learn>=1.3.0
+
+# Data manipulation and CSV handling
+pandas>=2.0.0
+
+# Plotting (optional, for Python-side plots)
+matplotlib>=3.7.0
+
+# Serial communication (for live ESP32 data capture)
+pyserial>=3.5
+
+# Progress bars (optional, nice to have)
+tqdm>=4.65.0
