@@ -1,0 +1,77 @@
+[package]
+name    = "ecg-esp32"
+version = "0.1.0"
+edition = "2021"
+authors = ["RT-QTinyECG-ESP32-Rust Project"]
+description = "Real-Time Quantized ECG Detection on ESP32-S3 - Educational Prototype"
+license = "MIT"
+
+# ── Dependencies: updated for Xtensa Rust 1.95.0.0 ────────────────────────────
+# This project is configured for ESP32-S3.
+# Target must be:
+#   xtensa-esp32s3-none-elf
+#
+# esp-hal 1.x is required for newer Xtensa Rust toolchains.
+
+[dependencies]
+# ESP32-S3 Hardware Abstraction Layer (no_std, no_main)
+# 'unstable' feature is required in esp-hal 1.1 to access some peripherals/APIs.
+esp-hal = { version = "1.1", features = ["esp32s3", "unstable"] }
+
+# ESP32-S3 panic + exception handler
+esp-backtrace = { version = "0.19", features = [
+    "esp32s3",
+    "panic-handler",
+    "println",
+] }
+
+# UART print macros (no_std)
+# IMPORTANT: default-features = false is required!
+# esp-println's default feature "auto" conflicts with "uart".
+esp-println = { version = "0.17", default-features = false, features = [
+    "esp32s3",
+    "uart",
+] }
+
+# Non-blocking I/O traits
+nb = "1.1"
+
+# Xtensa Rust runtime
+xtensa-lx-rt = "0.22"
+
+# ESP-IDF app descriptor required by newer espflash
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32s3"] }
+
+# ── Build profiles ─────────────────────────────────────────────────────────────
+[profile.dev]
+opt-level = "s"
+debug = true
+
+[profile.release]
+opt-level = "s"
+debug = false
+lto = true
+codegen-units = 1
+
+[[bin]]
+name = "ecg-esp32"
+path = "src/main.rs"
+test = false
+bench = false
+
+# ── Feature flags ──────────────────────────────────────────────────────────────
+[features]
+default = []
+
+# Enable UART Feed Mode:
+# ESP32-S3 reads ADC/ECG sample data from UART instead of real ADC input.
+#
+# Build with:
+#   cargo build --release --features uart-feed
+#
+# Flash with:
+#   espflash flash target\xtensa-esp32s3-none-elf\release\ecg-esp32 --port COM16 --monitor
+#
+# Then run on PC:
+#   py python/uart_feed_evaluator.py --port COM16
+uart-feed = []

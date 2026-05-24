@@ -1,0 +1,3 @@
+cargo:rustc-link-search=D:\PropertiesProject-D\Kuliah\Pemkon\RT-QTinyECG-ESP32-Rust\firmware\esp32-rust\target\xtensa-esp32s3-none-elf\release\build\esp32s3-0337670c395006de\out
+cargo:rerun-if-changed=device.x
+cargo:rerun-if-changed=build.rs
