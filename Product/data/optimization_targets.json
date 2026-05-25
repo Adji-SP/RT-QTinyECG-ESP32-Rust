@@ -1,14 +1,18 @@
 {
   "metrics": {
-    "pc_accuracy": 0.5785924989464812,
-    "esp32_accuracy": 0.5785924989464812,
+    "pc_accuracy": 0.9650231774125579,
+    "esp32_accuracy": 0.95448798988622,
     "n_samples": 2373,
-    "n_disagreements": 0,
-    "quant_delta": 0.0,
-    "agreement_rate": 1.0
+    "n_disagreements": 25,
+    "quant_delta": 0.010535187526337975,
+    "agreement_rate": 0.989464812473662
   },
   "disagreements": {
-    "n_total": 0
+    "n_total": 25,
+    "n_on_normal": 0,
+    "n_on_abnormal": 25,
+    "pc_says_normal_esp32_says_abnormal": 0,
+    "pc_says_abnormal_esp32_says_normal": 25
   },
   "model_info": {
     "type": "MLPClassifier",
@@ -18,20 +22,5 @@
     "int8_bytes": 116,
     "compression_ratio": 1.9655172413793103
   },
-  "recommendations": [
-    {
-      "priority": 2,
-      "type": "THRESHOLD_ADJUST",
-      "description": "ESP32 accuracy 57.9% < 85% target",
-      "action": "Adjust THRESHOLD in firmware/esp32-rust/src/inference.rs",
-      "file": "firmware/esp32-rust/src/inference.rs"
-    },
-    {
-      "priority": 0,
-      "type": "DATA_QUALITY",
-      "description": "PC model accuracy too low \u2014 data quality issue",
-      "action": "Improve synthetic data generation or use real ECG dataset",
-      "file": "python/generate_dummy_ecg.py"
-    }
-  ]
+  "recommendations": []
 }

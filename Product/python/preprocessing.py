@@ -113,7 +113,7 @@ def extract_features(window: np.ndarray) -> dict:
       - maximum     : Maximum value in the window (float)
       - minimum     : Minimum value in the window (float)
       - peak_to_peak: max - min (float)
-      - energy      : Sum of squared values (float)
+      - energy      : Mean squared value (float), matching firmware
 
     Args:
         window: 1D numpy array of filtered ADC values (window of samples)
@@ -126,7 +126,7 @@ def extract_features(window: np.ndarray) -> dict:
     maximum     = np.max(w)
     minimum     = np.min(w)
     peak_to_peak = maximum - minimum
-    energy      = np.sum(w ** 2)
+    energy      = np.mean(w ** 2)
 
     return {
         "mean":         mean,
@@ -151,6 +151,38 @@ def extract_features_array(window: np.ndarray) -> np.ndarray:
         feat["peak_to_peak"],
         feat["energy"],
     ], dtype=np.float64)
+
+
+def extract_firmware_mlp_input_array(window: np.ndarray) -> np.ndarray:
+    """
+    Return the exact 5-value input vector consumed by firmware MLP inference.
+
+    Firmware path:
+      1. Extract integer features:
+         [mean, maximum, minimum, peak_to_peak, mean_square_energy / 4096]
+      2. Normalize that vector per window to an int8-like range [-128, 127].
+
+    Training on this vector avoids a mismatch between sklearn/StandardScaler
+    preprocessing and the integer-only embedded inference path.
+    """
+    w = window.astype(np.int64)
+    if len(w) == 0:
+        return np.zeros(5, dtype=np.float64)
+
+    mean = int(np.sum(w) // len(w))
+    maximum = int(np.max(w))
+    minimum = int(np.min(w))
+    peak_to_peak = maximum - minimum
+    energy = int(np.sum(w * w) // len(w))
+    energy_scaled = max(-32767, min(32767, energy // 4096))
+
+    feat = np.array(
+        [mean, maximum, minimum, peak_to_peak, energy_scaled],
+        dtype=np.int64,
+    )
+    feat_max = max(1, int(np.max(np.abs(feat))))
+    feat_q = np.clip((feat * 127) // feat_max, -128, 127)
+    return feat_q.astype(np.float64)
 
 
 # ─── Window Generator ─────────────────────────────────────────────────────────

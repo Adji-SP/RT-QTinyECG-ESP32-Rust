@@ -8,7 +8,8 @@ Two model options (controlled by MODEL_TYPE):
   - "mlp"       : Tiny Multi-Layer Perceptron (5 → 8 → 1)
 
 Input features (per 128-sample window):
-  [mean, maximum, minimum, peak_to_peak, energy]
+  firmware-normalized int8-like vector derived from
+  [mean, maximum, minimum, peak_to_peak, energy / 4096]
 
 Output:
   0 = Normal
@@ -38,12 +39,11 @@ import numpy as np
 
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
-from preprocessing import moving_average, extract_features_array, sliding_windows
+from preprocessing import moving_average, extract_firmware_mlp_input_array
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     classification_report, confusion_matrix
@@ -52,7 +52,7 @@ from sklearn.metrics import (
 # ─── Configuration ────────────────────────────────────────────────────────────
 MODEL_TYPE   = "mlp"           # "logistic" or "mlp"
 WINDOW_SIZE  = 128             # Samples per window (matches firmware)
-WINDOW_STEP  = 64              # Step size (50% overlap)
+WINDOW_STEP  = 1               # Firmware cadence: one inference per new sample
 FILTER_SIZE  = 8               # Moving average window size
 RANDOM_SEED  = 42
 
@@ -89,9 +89,9 @@ def build_feature_dataset(adc_signal: np.ndarray, labels: np.ndarray,
     Build (X, y) feature dataset from sliding windows over the ECG signal.
 
     1. Apply moving average filter to the full signal
-    2. Slide a window of window_size samples with given step
-    3. For each window, extract 5 features
-    4. Assign label = majority label within that window
+    2. Keep the latest window_size samples, matching firmware ring buffer use
+    3. Once full, extract firmware-normalized MLP inputs every sample
+    4. Assign label = current sample label
 
     Returns:
         X : float64 array of shape (n_windows, 5)
@@ -103,16 +103,19 @@ def build_feature_dataset(adc_signal: np.ndarray, labels: np.ndarray,
     X_list = []
     y_list = []
 
-    # Step 2: Sliding windows
-    for start_idx, window in sliding_windows(filtered, window_size, step):
-        # Step 3: Extract features
-        features = extract_features_array(window)
-        X_list.append(features)
+    # Step 2: Firmware cadence: one inference per sample after buffer is full.
+    ring_buf = []
+    for idx, sample in enumerate(filtered.astype(np.int32)):
+        if len(ring_buf) < window_size:
+            ring_buf.append(int(sample))
+        else:
+            ring_buf.pop(0)
+            ring_buf.append(int(sample))
 
-        # Step 4: Window label = majority label in the window
-        window_labels = labels[start_idx : start_idx + window_size]
-        majority_label = int(np.round(np.mean(window_labels)))
-        y_list.append(majority_label)
+        if len(ring_buf) == window_size:
+            features = extract_firmware_mlp_input_array(np.array(ring_buf, dtype=np.int32))
+            X_list.append(features)
+            y_list.append(int(labels[idx]))
 
     X = np.array(X_list, dtype=np.float64)
     y = np.array(y_list, dtype=np.int32)
@@ -168,7 +171,7 @@ def main():
     # Build windowed feature dataset
     print(f"\n[train_simple_model] Building feature dataset...")
     print(f"  Window size : {WINDOW_SIZE} samples ({WINDOW_SIZE * 4} ms @ 250 Hz)")
-    print(f"  Window step : {WINDOW_STEP} samples")
+    print(f"  Window step : {WINDOW_STEP} sample (firmware cadence)")
     print(f"  Filter size : {FILTER_SIZE} samples")
 
     X, y = build_feature_dataset(adc_values, labels, WINDOW_SIZE, WINDOW_STEP, FILTER_SIZE)
@@ -180,22 +183,17 @@ def main():
         X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y
     )
 
-    # Feature scaling (important for MLP and logistic regression)
-    scaler = StandardScaler()
-    X_train_sc = scaler.fit_transform(X_train)
-    X_test_sc  = scaler.transform(X_test)
-
     # Train the model
     print(f"\n[train_simple_model] Training {MODEL_TYPE} model...")
     if MODEL_TYPE == "logistic":
-        model = train_logistic(X_train_sc, y_train)
+        model = train_logistic(X_train, y_train)
         print("  Model type: Logistic Regression")
     else:
-        model = train_mlp(X_train_sc, y_train)
+        model = train_mlp(X_train, y_train)
         print(f"  Model type: MLP ({model.hidden_layer_sizes} hidden units)")
 
     # Evaluate
-    y_pred = model.predict(X_test_sc)
+    y_pred = model.predict(X_test)
     acc  = accuracy_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred, zero_division=0)
     rec  = recall_score(y_test, y_pred, zero_division=0)
@@ -224,7 +222,7 @@ def main():
     with open(MODEL_OUT, "wb") as f:
         pickle.dump(model, f)
     with open(SCALER_OUT, "wb") as f:
-        pickle.dump(scaler, f)
+        pickle.dump(None, f)
 
     print(f"\n[train_simple_model] Model saved to : {MODEL_OUT}")
     print(f"[train_simple_model] Scaler saved to: {SCALER_OUT}")

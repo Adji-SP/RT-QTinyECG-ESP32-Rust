@@ -224,11 +224,11 @@ echo [Bonus] Generating GNUPlot visualizations...
 
 py python\export_plots_data.py >nul 2>&1
 
-gnuplot gnuplot\plot_accuracy_comparison.gp 2>nul && echo   OK: images\accuracy_comparison.png
-gnuplot gnuplot\plot_model_weights.gp       2>nul && echo   OK: images\model_weights.png
-gnuplot gnuplot\plot_quantization_error.gp  2>nul && echo   OK: images\quantization_error.png
-gnuplot gnuplot\plot_confusion_matrix.gp    2>nul && echo   OK: images\confusion_matrix.png
-gnuplot gnuplot\plot_training_history.gp    2>nul && echo   OK: images\training_history.png
+gnuplot gnuplot\evaluation\accuracy_comparison.gp 2>nul && echo   OK: images\evaluation\accuracy_comparison.png
+gnuplot gnuplot\evaluation\model_weights.gp       2>nul && echo   OK: images\evaluation\model_weights.png
+gnuplot gnuplot\evaluation\quantization_error.gp  2>nul && echo   OK: images\evaluation\quantization_error.png
+gnuplot gnuplot\evaluation\confusion_matrix.gp    2>nul && echo   OK: images\evaluation\confusion_matrix.png
+gnuplot gnuplot\evaluation\training_history.gp    2>nul && echo   OK: images\evaluation\training_history.png
 
 echo.
 
@@ -238,11 +238,11 @@ echo   Pipeline complete! Output files:
 echo     data\esp32_predictions.csv     -- ESP32-S3 predictions
 echo     data\comparison_report.csv     -- Model comparison
 echo     data\optimization_targets.json -- Optimization priorities
-echo     images\accuracy_comparison.png -- Accuracy bar chart
-echo     images\model_weights.png       -- Weight comparison
-echo     images\confusion_matrix.png    -- Confusion matrices
-echo     images\quantization_error.png  -- Quantization analysis
-echo     images\training_history.png    -- Fine-tune history
+echo     images\evaluation\accuracy_comparison.png -- Accuracy bar chart
+echo     images\evaluation\model_weights.png       -- Weight comparison
+echo     images\evaluation\confusion_matrix.png    -- Confusion matrices
+echo     images\evaluation\quantization_error.png  -- Quantization analysis
+echo     images\evaluation\training_history.png    -- Fine-tune history
 echo.
 echo   To fine-tune:  py python\fine_tune_model.py
 echo   Re-run:        run_uart_eval.bat %PORT%

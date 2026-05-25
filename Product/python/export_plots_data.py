@@ -73,16 +73,16 @@ def export_model_weights(model, npz):
                 return npz[k]
         return None
 
-    W1_q = get_npz("W1")
-    W2_q = get_npz("W2")
-    s1   = get_npz("scale_W1")
-    s2   = get_npz("scale_W2")
+    W1_q = npz["W_q_0"] if "W_q_0" in keys else get_npz("W1")
+    W2_q = npz["W_q_1"] if "W_q_1" in keys else get_npz("W2")
+    s1   = npz["w_scale_0"] if "w_scale_0" in keys else get_npz("scale_W1")
+    s2   = npz["w_scale_1"] if "w_scale_1" in keys else get_npz("scale_W2")
 
     # Dequantize: float_approx = int8 * scale / 127
     def dequantize(q, scale):
         if q is None or scale is None:
             return None
-        return q.astype(np.float32) * float(scale) / 127.0
+        return q.astype(np.float32) * float(np.asarray(scale).reshape(-1)[0])
 
     W1_dq = dequantize(W1_q, s1)
     W2_dq = dequantize(W2_q, s2)

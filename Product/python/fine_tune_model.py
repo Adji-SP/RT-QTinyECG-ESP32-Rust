@@ -23,7 +23,6 @@ import pickle
 import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 
@@ -36,6 +35,9 @@ MODEL_PKL      = os.path.join(DATA_DIR, "model.pkl")
 SCALER_PKL     = os.path.join(DATA_DIR, "scaler.pkl")
 REPORT_CSV     = os.path.join(DATA_DIR, "comparison_report.csv")
 FINETUNE_LOG   = os.path.join(DATA_DIR, "finetune_history.csv")
+
+sys.path.insert(0, SCRIPT_DIR)
+from preprocessing import extract_firmware_mlp_input_array
 
 # ── Signal processing constants ────────────────────────────────────────────────
 RING_BUF_SIZE  = 128
@@ -73,9 +75,8 @@ class MovingAverage:
 
 
 def extract_features_from_window(window):
-    """5 features: mean, std, min, max, peak-to-peak — mirrors firmware."""
-    a = np.array(window, dtype=np.float32)
-    return [float(np.mean(a)), float(np.std(a)), float(np.min(a)), float(np.max(a)), float(np.max(a) - np.min(a))]
+    """Firmware-normalized MLP inputs, matching inference.rs."""
+    return extract_firmware_mlp_input_array(np.array(window, dtype=np.int32)).tolist()
 
 
 def build_dataset_from_csv(csv_path):
@@ -210,10 +211,6 @@ def main():
     print(f"\n[fine_tune] Train: {len(X_train)}, Test: {len(X_test)}")
 
     # ── Feature scaling ───────────────────────────────────────────────────────
-    scaler = StandardScaler()
-    X_train_s = scaler.fit_transform(X_train)
-    X_test_s  = scaler.transform(X_test)
-
     # ── Load old model for comparison ─────────────────────────────────────────
     old_acc = None
     if os.path.exists(MODEL_PKL):
@@ -222,7 +219,8 @@ def main():
         if os.path.exists(SCALER_PKL):
             with open(SCALER_PKL, "rb") as f:
                 old_scaler = pickle.load(f)
-            old_preds = old_model.predict(old_scaler.transform(X_test))
+            old_input = old_scaler.transform(X_test) if old_scaler is not None else X_test
+            old_preds = old_model.predict(old_input)
             old_acc = accuracy_score(y_test, old_preds)
             print(f"\n[fine_tune] Previous model test accuracy: {old_acc:.4f}")
 
@@ -243,10 +241,10 @@ def main():
     import warnings
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model.fit(X_train_s, y_train)
+        model.fit(X_train, y_train)
 
     # ── Evaluate ──────────────────────────────────────────────────────────────
-    y_pred = model.predict(X_test_s)
+    y_pred = model.predict(X_test)
     new_acc = accuracy_score(y_test, y_pred)
 
     print(f"\n[fine_tune] Fine-tuning results:")
@@ -259,11 +257,16 @@ def main():
     print(classification_report(y_test, y_pred, target_names=["Normal", "Abnormal"]))
 
     # ── Save updated model ────────────────────────────────────────────────────
-    with open(MODEL_PKL, "wb") as f:
-        pickle.dump(model, f)
-    with open(SCALER_PKL, "wb") as f:
-        pickle.dump(scaler, f)
-    print(f"[fine_tune] Saved updated model to {MODEL_PKL}")
+    saved_model = False
+    if old_acc is None or new_acc >= old_acc:
+        with open(MODEL_PKL, "wb") as f:
+            pickle.dump(model, f)
+        with open(SCALER_PKL, "wb") as f:
+            pickle.dump(None, f)
+        saved_model = True
+        print(f"[fine_tune] Saved updated model to {MODEL_PKL}")
+    else:
+        print("[fine_tune] New model is worse than previous model; keeping existing model.pkl unchanged.")
 
     # ── Log history ───────────────────────────────────────────────────────────
     import datetime
@@ -273,6 +276,7 @@ def main():
         "epochs":       model.n_iter_,
         "old_accuracy": old_acc if old_acc else "N/A",
         "new_accuracy": new_acc,
+        "saved_model":  saved_model,
         "n_train":      len(X_train),
         "n_test":       len(X_test),
     }

@@ -32,9 +32,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(SCRIPT_DIR, "..")
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 
+sys.path.insert(0, SCRIPT_DIR)
+from preprocessing import extract_firmware_mlp_input_array
+
 ECG_CSV = os.path.join(DATA_DIR, "sample_ecg.csv")
 MODEL_PKL = os.path.join(DATA_DIR, "model.pkl")
 SCALER_PKL = os.path.join(DATA_DIR, "scaler.pkl")
+WEIGHTS_NPZ = os.path.join(DATA_DIR, "quantized_weights.npz")
 OUT_CSV = os.path.join(DATA_DIR, "esp32_predictions.csv")
 
 
@@ -147,20 +151,43 @@ def load_pc_model():
 
 # ── Extract features from window, mirrors preprocessing.py ────────────────────
 def extract_features(window):
-    arr = np.array(window, dtype=np.float32)
+    return extract_firmware_mlp_input_array(np.array(window, dtype=np.int32)).reshape(1, -1)
 
-    mean = float(np.mean(arr))
-    std = float(np.std(arr))
-    mn = float(np.min(arr))
-    mx = float(np.max(arr))
-    ptp = float(mx - mn)
 
-    return np.array([[mean, std, mn, mx, ptp]])
+def load_quantized_model():
+    if not os.path.exists(WEIGHTS_NPZ):
+        print("[uart_feed_evaluator] WARNING: No quantized weights found for dry-run ESP32 simulation.")
+        return None
+
+    data = np.load(WEIGHTS_NPZ)
+    w1 = data["W_q_0"].astype(np.int32)
+    b1 = data["b_q_0"].astype(np.int32)
+    w2 = data["W_q_1"].astype(np.int32)
+    b2 = data["b_q_1"].astype(np.int32)
+
+    # sklearn stores W1 as [features, hidden] and W2 as [hidden, output].
+    # Firmware stores W1 as [hidden, features] and W2 as [hidden] for one output.
+    if w1.shape[0] == 5:
+        w1 = w1.T
+    if len(w2.shape) == 2:
+        w2 = w2.reshape(-1)
+
+    return {"w1": w1, "b1": b1, "w2": w2, "b2": b2}
 
 
 # ── Dry-run: simulate ESP32-S3 int8 model on PC ───────────────────────────────
-def simulate_esp32(ring_buf):
-    return threshold_infer(ring_buf)
+def simulate_esp32(ring_buf, qmodel=None):
+    if len(ring_buf) < RING_BUF_SIZE:
+        return -1
+    if qmodel is None:
+        return threshold_infer(ring_buf)
+
+    feat_q = extract_features(ring_buf).reshape(-1).astype(np.int32)
+    hidden = np.maximum(qmodel["w1"].dot(feat_q) + qmodel["b1"], 0)
+    h_max = max(1, int(np.max(hidden)))
+    hidden_q = np.clip((hidden * 127) // h_max, -128, 127).astype(np.int32)
+    out = int(qmodel["w2"].dot(hidden_q) + qmodel["b2"][0])
+    return 1 if out > 0 else 0
 
 
 # ── Serial helpers ────────────────────────────────────────────────────────────
@@ -278,6 +305,7 @@ def run_evaluation(args):
 
     # ── Load PC model ─────────────────────────────────────────────────────────
     pc_model, pc_scaler = load_pc_model()
+    qmodel = None
 
     # ── Open serial port, skip if dry-run ─────────────────────────────────────
     ser = None
@@ -286,6 +314,7 @@ def run_evaluation(args):
         ser = open_serial_port(args.port, args.baud)
     else:
         print("[uart_feed_evaluator] DRY-RUN mode: simulating ESP32-S3 on PC.")
+        qmodel = load_quantized_model()
 
     # ── State ─────────────────────────────────────────────────────────────────
     filt = MovingAverage(FILTER_WINDOW)
@@ -319,8 +348,8 @@ def run_evaluation(args):
         if len(ring_buf) == RING_BUF_SIZE:
             if pc_model is not None:
                 feats = extract_features(ring_buf)
-                feats_scaled = pc_scaler.transform(feats)
-                pc_pred = int(pc_model.predict(feats_scaled)[0])
+                model_input = pc_scaler.transform(feats) if pc_scaler is not None else feats
+                pc_pred = int(pc_model.predict(model_input)[0])
             else:
                 pc_pred = threshold_infer(ring_buf)
         else:
@@ -351,7 +380,7 @@ def run_evaluation(args):
                 round_trip_ms = 0.0
                 errors += 1
         else:
-            esp32_pred = simulate_esp32(ring_buf)
+            esp32_pred = simulate_esp32(ring_buf, qmodel)
             round_trip_ms = 0.0
 
         # ── Record result ────────────────────────────────────────────────────

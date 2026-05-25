@@ -206,6 +206,10 @@ def main():
             b1_q = data["b_q_0"]
             w1_scale = float(data["w_scale_0"][0])
             b1_scale = float(data["b_scale_0"][0])
+            # sklearn stores first-layer weights as [features, hidden].
+            # Firmware reads row-major [hidden, features].
+            if W1_q.ndim == 2 and W1_q.shape[0] == 5:
+                W1_q = W1_q.T
         except KeyError:
             print("  WARNING: Could not find Layer 1 weights in NPZ. Using zeros.")
             W1_q = np.zeros((8, 5), dtype=np.int8)
@@ -218,6 +222,10 @@ def main():
             b2_q = data["b_q_1"]
             w2_scale = float(data["w_scale_1"][0])
             b2_scale = float(data["b_scale_1"][0])
+            # sklearn stores second-layer weights as [hidden, output].
+            # Firmware stores one output row as [1, hidden].
+            if W2_q.ndim == 2 and W2_q.shape[1] == 1:
+                W2_q = W2_q.T
         except KeyError:
             print("  WARNING: Could not find Layer 2 weights in NPZ. Using zeros.")
             W2_q = np.zeros((1, 8), dtype=np.int8)
