@@ -113,7 +113,7 @@ def extract_features(window: np.ndarray) -> dict:
       - maximum     : Maximum value in the window (float)
       - minimum     : Minimum value in the window (float)
       - peak_to_peak: max - min (float)
-      - energy      : Mean squared value (float), matching firmware
+      - energy      : Mean of (sample - mean)² (AC power, DC-offset removed)
 
     Args:
         window: 1D numpy array of filtered ADC values (window of samples)
@@ -126,7 +126,8 @@ def extract_features(window: np.ndarray) -> dict:
     maximum     = np.max(w)
     minimum     = np.min(w)
     peak_to_peak = maximum - minimum
-    energy      = np.mean(w ** 2)
+    # Subtract DC offset before squaring so energy measures AC signal power.
+    energy      = np.mean((w - mean) ** 2)
 
     return {
         "mean":         mean,
@@ -142,6 +143,7 @@ def extract_features_array(window: np.ndarray) -> np.ndarray:
     Same as extract_features() but returns a numpy array instead of dict.
     Order: [mean, maximum, minimum, peak_to_peak, energy]
     Used for model training and inference.
+    Energy is mean-centered (DC-offset removed): mean((sample - mean)²).
     """
     feat = extract_features(window)
     return np.array([
@@ -153,17 +155,21 @@ def extract_features_array(window: np.ndarray) -> np.ndarray:
     ], dtype=np.float64)
 
 
-def extract_firmware_mlp_input_array(window: np.ndarray) -> np.ndarray:
+def extract_raw_features(window: np.ndarray) -> np.ndarray:
     """
-    Return the exact 5-value input vector consumed by firmware MLP inference.
+    Extract raw 5-value integer feature vector from an ECG window.
 
-    Firmware path:
-      1. Extract integer features:
-         [mean, maximum, minimum, peak_to_peak, mean_square_energy / 4096]
-      2. Normalize that vector per window to an int8-like range [-128, 127].
+    Features (in firmware order):
+      [mean, maximum, minimum, peak_to_peak, centered_energy_scaled]
 
-    Training on this vector avoids a mismatch between sklearn/StandardScaler
-    preprocessing and the integer-only embedded inference path.
+    All values are computed in integer arithmetic to match firmware exactly.
+    Energy = mean((sample - mean)^2) / 4096  (mean-centered, DC removed).
+
+    Returns a float64 array of raw integer feature values.
+    This is the UNNORMALIZED feature vector. Apply StandardScaler or
+    apply_global_norm() before feeding to the model.
+
+    Must be kept in sync with extract_features() in firmware/esp32-rust/src/inference.rs.
     """
     w = window.astype(np.int64)
     if len(w) == 0:
@@ -173,16 +179,62 @@ def extract_firmware_mlp_input_array(window: np.ndarray) -> np.ndarray:
     maximum = int(np.max(w))
     minimum = int(np.min(w))
     peak_to_peak = maximum - minimum
-    energy = int(np.sum(w * w) // len(w))
+    centered = w - mean
+    energy = int(np.sum(centered * centered) // len(w))
     energy_scaled = max(-32767, min(32767, energy // 4096))
 
-    feat = np.array(
+    return np.array(
         [mean, maximum, minimum, peak_to_peak, energy_scaled],
-        dtype=np.int64,
+        dtype=np.float64,
     )
-    feat_max = max(1, int(np.max(np.abs(feat))))
-    feat_q = np.clip((feat * 127) // feat_max, -128, 127)
-    return feat_q.astype(np.float64)
+
+
+def apply_global_norm(raw_features: np.ndarray,
+                      feat_mean: np.ndarray,
+                      feat_std: np.ndarray) -> np.ndarray:
+    """
+    Apply pre-computed global normalization (z-score) to raw features.
+
+    This is the firmware-compatible normalization: subtract the training
+    mean and divide by training std, then clip to [-128, 127] and round
+    to integer (i8-like range).
+
+    feat_mean and feat_std come from train_simple_model.py scaler,
+    and are stored as constants in model_weights.rs for firmware use.
+
+    Args:
+        raw_features : 1D array of 5 raw feature values
+        feat_mean    : Per-feature training mean (5 values)
+        feat_std     : Per-feature training std  (5 values), min 1.0 to avoid /0
+
+    Returns:
+        Normalized float64 array in approximately [-3, +3] range.
+    """
+    safe_std = np.where(feat_std < 1e-6, 1.0, feat_std)
+    normalized = (raw_features - feat_mean) / safe_std
+    return normalized
+
+
+def extract_firmware_mlp_input_array(window: np.ndarray,
+                                     feat_mean: np.ndarray | None = None,
+                                     feat_std:  np.ndarray | None = None) -> np.ndarray:
+    """
+    Return the 5-value input vector consumed by firmware MLP inference.
+
+    If feat_mean / feat_std are provided (from the trained scaler),
+    applies global z-score normalization — this is the CORRECT mode that
+    preserves amplitude information across windows.
+
+    If feat_mean / feat_std are None, returns raw integer features
+    (useful for fitting the scaler during training).
+
+    The firmware uses fixed normalization constants exported from training.
+    See model_weights.rs: FEAT_MEAN and FEAT_STD arrays.
+    """
+    raw = extract_raw_features(window)
+    if feat_mean is None or feat_std is None:
+        return raw
+    return apply_global_norm(raw, feat_mean, feat_std)
 
 
 # ─── Window Generator ─────────────────────────────────────────────────────────

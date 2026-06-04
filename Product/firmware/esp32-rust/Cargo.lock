@@ -184,6 +184,7 @@ dependencies = [
  "esp-hal",
  "esp-println",
  "nb 1.1.0",
+ "xtensa-lx",
  "xtensa-lx-rt",
 ]
 

@@ -69,17 +69,25 @@ def quantize_layer_symmetric(weights_f32: np.ndarray) -> tuple[np.ndarray, float
 
 
 def quantize_bias_int32(bias_f32: np.ndarray, weight_scale: float,
-                         input_scale: float = 1.0) -> tuple[np.ndarray, float]:
+                         input_scale: float = 127.0) -> tuple[np.ndarray, float]:
     """
     Quantize bias to int32.
 
     Biases are quantized with the combined scale (weight_scale * input_scale).
-    In simple implementations, input_scale = 1.0 (not input-quantized).
+
+    The firmware accumulates:  acc += W_q[i] * feat_q[i]
+    where feat_q lives in [-128, 127]  (per-window normalized to i8 range).
+    So the natural scale of the accumulator is:  weight_scale * 127.0
+
+    Therefore input_scale must be 127.0, NOT 1.0.
+    Using 1.0 would under-scale the bias by 127×, making it effectively
+    negligible compared to the weight×input accumulator sum.
 
     Args:
         bias_f32     : float32 bias vector
         weight_scale : Scale of the weight matrix for this layer
-        input_scale  : Scale of the input (1.0 if input not quantized)
+        input_scale  : Scale of the input activations in the firmware
+                       (127.0 for i8-normalized inputs/hidden; matches firmware)
 
     Returns:
         (bias_int32, bias_scale)
@@ -183,9 +191,12 @@ def main():
         W_f32 = layer["W"]
         b_f32 = layer["b"]
 
-        # Quantize weights
+        # Quantize weights.
+        # input_scale=127.0 because the firmware accumulator operates on
+        # values in [-128, 127] (per-window normalized), so the true
+        # accumulator scale is weight_scale * 127. See quantize_bias_int32().
         W_q, w_scale = quantize_layer_symmetric(W_f32)
-        b_q, b_scale = quantize_bias_int32(b_f32, w_scale)
+        b_q, b_scale = quantize_bias_int32(b_f32, w_scale, input_scale=127.0)
 
         # Compute sizes
         f32_size = W_f32.nbytes + b_f32.nbytes

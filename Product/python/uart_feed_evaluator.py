@@ -35,11 +35,13 @@ DATA_DIR = os.path.join(ROOT_DIR, "data")
 sys.path.insert(0, SCRIPT_DIR)
 from preprocessing import extract_firmware_mlp_input_array
 
-ECG_CSV = os.path.join(DATA_DIR, "sample_ecg.csv")
-MODEL_PKL = os.path.join(DATA_DIR, "model.pkl")
+ECG_CSV    = os.path.join(DATA_DIR, "sample_ecg.csv")
+MODEL_PKL  = os.path.join(DATA_DIR, "model.pkl")
 SCALER_PKL = os.path.join(DATA_DIR, "scaler.pkl")
 WEIGHTS_NPZ = os.path.join(DATA_DIR, "quantized_weights.npz")
-OUT_CSV = os.path.join(DATA_DIR, "esp32_predictions.csv")
+FEAT_MEAN_NPY = os.path.join(DATA_DIR, "feat_mean.npy")
+FEAT_STD_NPY  = os.path.join(DATA_DIR, "feat_std.npy")
+OUT_CSV    = os.path.join(DATA_DIR, "esp32_predictions.csv")
 
 
 # ── Signal processing constants, must match firmware ──────────────────────────
@@ -149,9 +151,28 @@ def load_pc_model():
     return None, None
 
 
-# ── Extract features from window, mirrors preprocessing.py ────────────────────
-def extract_features(window):
-    return extract_firmware_mlp_input_array(np.array(window, dtype=np.int32)).reshape(1, -1)
+# ── Extract features from window, mirrors firmware inference path ────────────────
+def load_normalization_constants():
+    """
+    Load feat_mean and feat_std saved by train_simple_model.py.
+    Returns (feat_mean, feat_std) as float32 arrays, or (None, None) if missing.
+    """
+    if os.path.exists(FEAT_MEAN_NPY) and os.path.exists(FEAT_STD_NPY):
+        feat_mean = np.load(FEAT_MEAN_NPY).astype(np.float64)
+        feat_std  = np.load(FEAT_STD_NPY).astype(np.float64)
+        print(f"[uart_feed_evaluator] Loaded normalization constants from {DATA_DIR}")
+        return feat_mean, feat_std
+    print("[uart_feed_evaluator] WARNING: feat_mean.npy / feat_std.npy not found.")
+    print("  Run: python python/train_simple_model.py to regenerate.")
+    return None, None
+
+
+def extract_features(window, feat_mean=None, feat_std=None):
+    return extract_firmware_mlp_input_array(
+        np.array(window, dtype=np.int32),
+        feat_mean=feat_mean,
+        feat_std=feat_std,
+    ).reshape(1, -1)
 
 
 def load_quantized_model():
@@ -175,18 +196,23 @@ def load_quantized_model():
     return {"w1": w1, "b1": b1, "w2": w2, "b2": b2}
 
 
-# ── Dry-run: simulate ESP32-S3 int8 model on PC ───────────────────────────────
-def simulate_esp32(ring_buf, qmodel=None):
+# ── Dry-run: simulate ESP32-S3 int8 model on PC ──────────────────────────────────────
+def simulate_esp32(ring_buf, qmodel=None, feat_mean=None, feat_std=None):
     if len(ring_buf) < RING_BUF_SIZE:
         return -1
     if qmodel is None:
         return threshold_infer(ring_buf)
 
-    feat_q = extract_features(ring_buf).reshape(-1).astype(np.int32)
+    feat_q = extract_features(ring_buf, feat_mean, feat_std).reshape(-1).astype(np.int32)
+
+    # Layer 1: hidden = ReLU(W1 @ feat_q + B1)
+    # No hidden re-normalization applied here.
+    # Mirrors the fixed inference.rs (Bug C fix): sklearn's W2 was trained on
+    # raw relu outputs, so re-normalizing would break the W2/B2 scaling.
     hidden = np.maximum(qmodel["w1"].dot(feat_q) + qmodel["b1"], 0)
-    h_max = max(1, int(np.max(hidden)))
-    hidden_q = np.clip((hidden * 127) // h_max, -128, 127).astype(np.int32)
-    out = int(qmodel["w2"].dot(hidden_q) + qmodel["b2"][0])
+
+    # Layer 2: output = W2 @ hidden + B2
+    out = int(qmodel["w2"].dot(hidden) + qmodel["b2"][0])
     return 1 if out > 0 else 0
 
 
@@ -303,8 +329,9 @@ def run_evaluation(args):
     print(f"[uart_feed_evaluator] Loaded {len(df)} samples from {args.data}")
     print(f"[uart_feed_evaluator] ADC column: '{adc_col}', Label column: '{label_col}'")
 
-    # ── Load PC model ─────────────────────────────────────────────────────────
+    # ── Load PC model ───────────────────────────────────────────────────────────
     pc_model, pc_scaler = load_pc_model()
+    feat_mean, feat_std = load_normalization_constants()
     qmodel = None
 
     # ── Open serial port, skip if dry-run ─────────────────────────────────────
@@ -347,9 +374,11 @@ def run_evaluation(args):
         # ── PC float32 model prediction ──────────────────────────────────────
         if len(ring_buf) == RING_BUF_SIZE:
             if pc_model is not None:
-                feats = extract_features(ring_buf)
-                model_input = pc_scaler.transform(feats) if pc_scaler is not None else feats
-                pc_pred = int(pc_model.predict(model_input)[0])
+                feats = extract_features(ring_buf, feat_mean, feat_std)
+                # scaler.pkl already contains the fitted StandardScaler.
+                # extract_features() already applies global norm via feat_mean/std,
+                # so we pass feats directly without an additional scaler.transform().
+                pc_pred = int(pc_model.predict(feats)[0])
             else:
                 pc_pred = threshold_infer(ring_buf)
         else:
@@ -380,7 +409,7 @@ def run_evaluation(args):
                 round_trip_ms = 0.0
                 errors += 1
         else:
-            esp32_pred = simulate_esp32(ring_buf, qmodel)
+            esp32_pred = simulate_esp32(ring_buf, qmodel, feat_mean, feat_std)
             round_trip_ms = 0.0
 
         # ── Record result ────────────────────────────────────────────────────

@@ -18,7 +18,12 @@
 //! PC sends "2048\n" → ESP32-S3 responds "-1\n", "0\n", or "1\n".
 //!
 //! ## Pipeline
-//!   ADC/UART → moving avg filter → ring buffer → inference → LED/Buzzer → UART log
+//!   ADC/UART → moving avg filter → ring buffer → inference → debounce → LED/Buzzer → UART log
+//!
+//! ## Timing
+//!   Inference latency is measured using the Xtensa CPU cycle counter at 240 MHz.
+//!   CSV logging is throttled to every LOG_EVERY_N samples to avoid disturbing
+//!   the 250 Hz sample loop with slow UART writes.
 //!
 //! Target: xtensa-esp32s3-none-elf
 //! DISCLAIMER: Educational prototype only. Not a medical device.
@@ -69,6 +74,27 @@ const RING_BUF_SIZE: usize = 128;
 
 /// Moving average filter window.
 const FILTER_WINDOW: usize = 8;
+
+/// CPU clock frequency in Hz (ESP32-S3 default: 240 MHz).
+/// Used to convert CPU cycle counts to microseconds.
+const CPU_FREQ_HZ: u32 = 240_000_000;
+
+// ── Debounce Constants ────────────────────────────────────────────────────────
+/// Number of consecutive ABNORMAL windows required before triggering alert.
+/// Prevents false positives from single noisy predictions.
+const DEBOUNCE_ABNORMAL: u8 = 3;
+
+/// Number of consecutive NORMAL windows required before clearing alert.
+/// Prevents alert flickering on borderline signals.
+const DEBOUNCE_NORMAL: u8 = 5;
+
+// ── Logging Rate ──────────────────────────────────────────────────────────────
+/// In ADC mode, log a CSV row only every N samples.
+/// Reduces UART output from 250 writes/sec to 250/N writes/sec.
+/// At 115200 baud each CSV row ≈ 0.7 ms; logging every sample ≈ 17% overhead.
+/// Logging every 8th sample ≈ 2% overhead.
+#[cfg(not(feature = "uart-feed"))]
+const LOG_EVERY_N: u32 = 8;
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 #[entry]
@@ -150,13 +176,33 @@ fn main() -> ! {
     #[cfg(not(feature = "uart-feed"))]
     let delay = Delay::new();
 
-    // ── 5. Signal processing state ───────────────────────────────────────────
+    // ── 5. Signal processing state ─────────────────────────────────────────
     let mut ring_buf = ring_buffer::RingBuffer::<i32, RING_BUF_SIZE>::new();
     let mut filt = filter::MovingAverageState::<FILTER_WINDOW>::new();
 
-    // ── 6. Application state variables ───────────────────────────────────────
+    // ── 6. Application state variables ───────────────────────────────────
     let mut time_ms: u32 = 0;
     let mut alert_active: bool = false;
+
+    // ── Debounce counters ────────────────────────────────────────────────
+    //
+    // abnormal_streak: consecutive windows predicting abnormal
+    // normal_streak  : consecutive windows predicting normal
+    //
+    // Alert fires when abnormal_streak reaches DEBOUNCE_ABNORMAL.
+    // Alert clears when normal_streak  reaches DEBOUNCE_NORMAL.
+    let mut abnormal_streak: u8 = 0;
+    let mut normal_streak: u8 = 0;
+
+    // ── Alert latency tracking ────────────────────────────────────────────
+    //
+    // Records time_ms at which the first abnormal prediction occurred in
+    // the current run. Used to compute alert_latency_ms.
+    let mut first_abnormal_ms: u32 = 0;
+
+    // ── Sample counter for UART log throttling (ADC mode only) ────────────
+    #[cfg(not(feature = "uart-feed"))]
+    let mut log_counter: u32 = 0;
 
     // ── 7. UART CSV header, only for ADC mode ────────────────────────────────
     #[cfg(not(feature = "uart-feed"))]
@@ -188,49 +234,93 @@ fn main() -> ! {
         let mut inference_us: u32 = 0;
         let mut alert_latency_ms: u32 = 0;
 
-        // ── d) Inference, runs once buffer is full ───────────────────────────
+        // ── d) Inference, runs once buffer is full ───────────────────────
         if ring_buf.is_full() {
             let window: &[i32] = ring_buf.as_slice();
 
+            // ── Real inference timing via CPU cycle counter ───────────────
+            //
+            // xtensa_lx::timer::get_cycle_count() reads the Xtensa CCOUNT
+            // register (increments every CPU cycle at 240 MHz).
+            // Δcycles / CPU_FREQ_HZ × 1_000_000 = microseconds.
+            let cycles_before = xtensa_lx::timer::get_cycle_count();
             prediction = inference::infer(window);
+            let cycles_after = xtensa_lx::timer::get_cycle_count();
 
-            // Placeholder timing.
-            // Real timing can be measured with CPU cycle counter later.
-            inference_us = 25;
+            let delta_cycles = cycles_after.wrapping_sub(cycles_before);
+            // Avoid division by zero; saturate at u32::MAX µs if overflow.
+            inference_us = (delta_cycles as u64 * 1_000_000 / CPU_FREQ_HZ as u64)
+                .min(u32::MAX as u64) as u32;
 
-            // ── e) Alert state machine ───────────────────────────────────────
+            // ── e) Debounce state machine ─────────────────────────────────
+            //
+            // Require DEBOUNCE_ABNORMAL consecutive abnormal predictions
+            // before activating alert. Require DEBOUNCE_NORMAL consecutive
+            // normal predictions before clearing alert.
+            // This eliminates single-window false positives and prevents
+            // buzzer/LED flickering on borderline signals.
             if prediction == 1 {
-                if !alert_active {
-                    alert_active = true;
-                    alert_latency_ms = 0;
-                }
+                abnormal_streak = abnormal_streak.saturating_add(1);
+                normal_streak = 0;
 
+                if abnormal_streak >= DEBOUNCE_ABNORMAL {
+                    if !alert_active {
+                        alert_active = true;
+                        first_abnormal_ms = time_ms;
+                    }
+                }
+            } else {
+                normal_streak = normal_streak.saturating_add(1);
+                abnormal_streak = 0;
+
+                if normal_streak >= DEBOUNCE_NORMAL {
+                    if alert_active {
+                        alert_active = false;
+                    }
+                }
+            }
+
+            // ── f) Alert latency ─────────────────────────────────────────
+            //
+            // Alert latency = time from first abnormal prediction to when
+            // the alert actually fired (after debounce confirmation).
+            alert_latency_ms = if alert_active {
+                time_ms.wrapping_sub(first_abnormal_ms)
+            } else {
+                0
+            };
+
+            // ── g) Drive LED and buzzer ────────────────────────────────────
+            if alert_active {
                 led.set_high();
                 buzzer.set_high();
             } else {
-                if alert_active {
-                    alert_active = false;
-                }
-
                 led.set_low();
                 buzzer.set_low();
-                alert_latency_ms = 0;
             }
         }
 
-        // ── f) Output: depends on build mode ─────────────────────────────────
+        // ── h) Output: depends on build mode ─────────────────────────────
 
-        // ADC Mode: log full CSV line over UART for post-analysis.
+        // ADC Mode: log CSV line over UART for post-analysis.
+        // Throttled to every LOG_EVERY_N samples to reduce UART overhead.
+        // At 250 Hz and LOG_EVERY_N=8: logs at ~31 Hz, UART overhead < 2%.
         #[cfg(not(feature = "uart-feed"))]
-        logger::log_csv(
-            time_ms,
-            adc_raw as i32,
-            filtered,
-            inference_us,
-            prediction,
-            alert_active as u8,
-            alert_latency_ms,
-        );
+        {
+            log_counter = log_counter.wrapping_add(1);
+            if log_counter >= LOG_EVERY_N {
+                log_counter = 0;
+                logger::log_csv(
+                    time_ms,
+                    adc_raw as i32,
+                    filtered,
+                    inference_us,
+                    prediction,
+                    alert_active as u8,
+                    alert_latency_ms,
+                );
+            }
+        }
 
         // UART Feed Mode: send only prediction back to PC.
         //

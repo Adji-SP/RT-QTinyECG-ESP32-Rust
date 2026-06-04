@@ -29,13 +29,14 @@ Output:
 import os
 import csv
 import time
+import pickle
 import collections
 import numpy as np
 
 # Import our preprocessing helpers
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
-from preprocessing import moving_average, extract_features_array
+from preprocessing import moving_average, extract_features_array, extract_firmware_mlp_input_array
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 SAMPLE_RATE_HZ    = 250        # Simulated sampling rate
@@ -51,6 +52,9 @@ THRESHOLD_MEAN_LOW     = 1750  # Mean below this = depressed baseline (abnormal)
 
 INPUT_CSV  = os.path.join(os.path.dirname(__file__), "..", "data", "sample_ecg.csv")
 OUTPUT_CSV = os.path.join(os.path.dirname(__file__), "..", "data", "simulated_realtime_log.csv")
+MODEL_PKL     = os.path.join(os.path.dirname(__file__), "..", "data", "model.pkl")
+FEAT_MEAN_NPY = os.path.join(os.path.dirname(__file__), "..", "data", "feat_mean.npy")
+FEAT_STD_NPY  = os.path.join(os.path.dirname(__file__), "..", "data", "feat_std.npy")
 
 
 # ─── Inference Functions ──────────────────────────────────────────────────────
@@ -85,23 +89,46 @@ def threshold_inference(window: np.ndarray) -> int:
     return 0  # Normal
 
 
-def load_mlp_weights():
+def load_sklearn_model():
     """
-    Load quantized MLP weights if available, else return None.
+    Load the trained sklearn model from data/model.pkl.
+    Returns the model if available, else None.
+    """
+    if not os.path.exists(MODEL_PKL):
+        print(f"[realtime_ecg_simulator] WARNING: {MODEL_PKL} not found.")
+        print("  Falling back to threshold classifier.")
+        print("  Run: python python/train_simple_model.py")
+        return None
+    with open(MODEL_PKL, "rb") as f:
+        model = pickle.load(f)
+    print(f"[realtime_ecg_simulator] Loaded model: {type(model).__name__}")
+    return model
 
-    Tries to import the weights exported by export_rust_weights.py.
-    If not available, falls back to threshold inference only.
-    """
-    try:
-        weights_file = os.path.join(
-            os.path.dirname(__file__), "..", "firmware", "esp32-rust", "src", "model_weights.py"
+
+def load_normalization_constants():
+    """Load feat_mean / feat_std saved by train_simple_model.py."""
+    if os.path.exists(FEAT_MEAN_NPY) and os.path.exists(FEAT_STD_NPY):
+        return (
+            np.load(FEAT_MEAN_NPY).astype(np.float64),
+            np.load(FEAT_STD_NPY).astype(np.float64),
         )
-        if os.path.exists(weights_file):
-            # This would import the Python-format weights
-            pass
-    except Exception:
-        pass
-    return None
+    print("[realtime_ecg_simulator] WARNING: feat_mean.npy / feat_std.npy not found.")
+    print("  Run: python python/train_simple_model.py to regenerate.")
+    return None, None
+
+
+def mlp_sklearn_inference(window: np.ndarray, model,
+                          feat_mean=None, feat_std=None) -> int:
+    """
+    Run inference using the trained sklearn model.
+
+    Uses extract_firmware_mlp_input_array() with global normalization constants
+    to produce the exact same feature vector as the firmware inference path.
+    """
+    feats = extract_firmware_mlp_input_array(
+        window, feat_mean=feat_mean, feat_std=feat_std
+    ).reshape(1, -1)
+    return int(model.predict(feats)[0])
 
 
 def mlp_inference_manual(window: np.ndarray,
@@ -240,6 +267,14 @@ def main():
     alert_sm   = AlertStateMachine(simulated_gpio_delay_ms=1.5)
     log_rows   = []
 
+    # Load sklearn model (preferred) or fall back to threshold classifier
+    sklearn_model = load_sklearn_model()
+    feat_mean, feat_std = load_normalization_constants()
+    if sklearn_model is not None:
+        print("[realtime_ecg_simulator] Using: sklearn MLP model (matches firmware TinyML path)")
+    else:
+        print("[realtime_ecg_simulator] Using: threshold classifier (fallback)")
+
     # Moving average state (causal, per-sample)
     recent_samples = collections.deque(maxlen=MOVING_AVG_SIZE)
 
@@ -266,7 +301,14 @@ def main():
 
             # Measure inference time on PC
             t_start = time.perf_counter()
-            prediction = threshold_inference(window)
+            if sklearn_model is not None:
+                # Use the sklearn MLP model — same feature path as firmware
+                prediction = mlp_sklearn_inference(window, sklearn_model,
+                                                   feat_mean=feat_mean,
+                                                   feat_std=feat_std)
+            else:
+                # Fall back to threshold classifier if no model available
+                prediction = threshold_inference(window)
             t_end   = time.perf_counter()
 
             inference_us = (t_end - t_start) * 1e6  # Convert to microseconds

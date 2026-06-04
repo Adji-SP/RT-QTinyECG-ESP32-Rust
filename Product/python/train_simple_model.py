@@ -39,11 +39,12 @@ import numpy as np
 
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
-from preprocessing import moving_average, extract_firmware_mlp_input_array
+from preprocessing import moving_average, extract_raw_features
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     classification_report, confusion_matrix
@@ -59,6 +60,8 @@ RANDOM_SEED  = 42
 INPUT_CSV  = os.path.join(os.path.dirname(__file__), "..", "data", "sample_ecg.csv")
 MODEL_OUT  = os.path.join(os.path.dirname(__file__), "..", "data", "model.pkl")
 SCALER_OUT = os.path.join(os.path.dirname(__file__), "..", "data", "scaler.pkl")
+FEAT_MEAN_OUT = os.path.join(os.path.dirname(__file__), "..", "data", "feat_mean.npy")
+FEAT_STD_OUT  = os.path.join(os.path.dirname(__file__), "..", "data", "feat_std.npy")
 
 
 # ─── Data Loading ─────────────────────────────────────────────────────────────
@@ -89,21 +92,23 @@ def build_feature_dataset(adc_signal: np.ndarray, labels: np.ndarray,
     Build (X, y) feature dataset from sliding windows over the ECG signal.
 
     1. Apply moving average filter to the full signal
-    2. Keep the latest window_size samples, matching firmware ring buffer use
-    3. Once full, extract firmware-normalized MLP inputs every sample
-    4. Assign label = current sample label
+    2. Slide a ring buffer of window_size over the filtered signal
+    3. Once full, extract RAW features (no per-window normalization)
+    4. A StandardScaler is fitted on these raw features later in main()
+
+    Using raw features (not per-window normalized) preserves amplitude
+    information across windows, which is critical for ECG abnormality
+    detection (e.g., elevated baseline, large peak-to-peak variation).
 
     Returns:
-        X : float64 array of shape (n_windows, 5)
+        X : float64 array of shape (n_windows, 5)  -- RAW, unscaled
         y : int32 array of shape (n_windows,)
     """
-    # Step 1: Filter the signal
     filtered = moving_average(adc_signal, filter_size)
 
     X_list = []
     y_list = []
 
-    # Step 2: Firmware cadence: one inference per sample after buffer is full.
     ring_buf = []
     for idx, sample in enumerate(filtered.astype(np.int32)):
         if len(ring_buf) < window_size:
@@ -113,7 +118,8 @@ def build_feature_dataset(adc_signal: np.ndarray, labels: np.ndarray,
             ring_buf.append(int(sample))
 
         if len(ring_buf) == window_size:
-            features = extract_firmware_mlp_input_array(np.array(ring_buf, dtype=np.int32))
+            # Raw features — no per-window normalization
+            features = extract_raw_features(np.array(ring_buf, dtype=np.int32))
             X_list.append(features)
             y_list.append(int(labels[idx]))
 
@@ -183,23 +189,45 @@ def main():
         X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y
     )
 
-    # Train the model
+    # Fit StandardScaler on training set to normalize features globally.
+    # Global normalization preserves amplitude differences between windows
+    # (per-window normalization destroys this information).
+    print("\n[train_simple_model] Fitting StandardScaler on training features...")
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled  = scaler.transform(X_test)
+
+    feat_mean = scaler.mean_.astype(np.float32)
+    feat_std  = scaler.scale_.astype(np.float32)
+    print(f"  Feature means : {feat_mean.round(2)}")
+    print(f"  Feature stds  : {feat_std.round(2)}")
+
     print(f"\n[train_simple_model] Training {MODEL_TYPE} model...")
     if MODEL_TYPE == "logistic":
-        model = train_logistic(X_train, y_train)
+        model = train_logistic(X_train_scaled, y_train)
         print("  Model type: Logistic Regression")
     else:
-        model = train_mlp(X_train, y_train)
+        model = train_mlp(X_train_scaled, y_train)
         print(f"  Model type: MLP ({model.hidden_layer_sizes} hidden units)")
 
     # Evaluate
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(X_test_scaled)
     acc  = accuracy_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred, zero_division=0)
     rec  = recall_score(y_test, y_pred, zero_division=0)
     f1   = f1_score(y_test, y_pred, zero_division=0)
 
-    print(f"\n── Training Results ────────────────────────────")
+    # Save model, scaler, and normalization constants FIRST
+    # (before any print that might crash on Windows CP1252)
+    os.makedirs(os.path.dirname(MODEL_OUT), exist_ok=True)
+    with open(MODEL_OUT, "wb") as f:
+        pickle.dump(model, f)
+    with open(SCALER_OUT, "wb") as f:
+        pickle.dump(scaler, f)
+    np.save(FEAT_MEAN_OUT, feat_mean)
+    np.save(FEAT_STD_OUT,  feat_std)
+
+    print(f"\n-- Training Results --")
     print(f"  Accuracy : {acc:.4f}")
     print(f"  Precision: {prec:.4f}")
     print(f"  Recall   : {rec:.4f}")
@@ -211,21 +239,16 @@ def main():
 
     # Print weights for MLP (for quantization)
     if MODEL_TYPE == "mlp":
-        print(f"\n── MLP Weights ─────────────────────────────────")
+        print(f"\n-- MLP Weights --")
         for i, (W, b) in enumerate(zip(model.coefs_, model.intercepts_)):
             print(f"  Layer {i+1}: W shape={W.shape}, b shape={b.shape}")
             print(f"    W range: [{W.min():.4f}, {W.max():.4f}]")
             print(f"    b range: [{b.min():.4f}, {b.max():.4f}]")
 
-    # Save model and scaler
-    os.makedirs(os.path.dirname(MODEL_OUT), exist_ok=True)
-    with open(MODEL_OUT, "wb") as f:
-        pickle.dump(model, f)
-    with open(SCALER_OUT, "wb") as f:
-        pickle.dump(None, f)
-
-    print(f"\n[train_simple_model] Model saved to : {MODEL_OUT}")
-    print(f"[train_simple_model] Scaler saved to: {SCALER_OUT}")
+    print(f"\n[train_simple_model] Model saved to  : {MODEL_OUT}")
+    print(f"[train_simple_model] Scaler saved to  : {SCALER_OUT}")
+    print(f"[train_simple_model] feat_mean saved  : {FEAT_MEAN_OUT}")
+    print(f"[train_simple_model] feat_std  saved  : {FEAT_STD_OUT}")
     print("[train_simple_model] Done. Run quantize_weights.py next.")
 
 

@@ -39,6 +39,11 @@ nb = "1.1"
 # Xtensa Rust runtime
 xtensa-lx-rt = "0.22"
 
+# Xtensa LX hardware abstractions (cycle counter, timer registers)
+# This is a transitive dep of xtensa-lx-rt; we add it explicitly so
+# xtensa_lx::timer::get_cycle_count() is accessible in firmware code.
+xtensa-lx = "0.13"
+
 # ESP-IDF app descriptor required by newer espflash
 esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32s3"] }
 
