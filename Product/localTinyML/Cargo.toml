@@ -1,0 +1,12 @@
+[package]
+name = "localTinyML"
+version = "0.1.0"
+edition = "2021"
+description = "Local test harness for RT-QTinyECG quantized MLP inference"
+
+# No special dependencies needed — pure Rust std
+[dependencies]
+
+[[bin]]
+name = "localTinyML"
+path = "src/main.rs"
