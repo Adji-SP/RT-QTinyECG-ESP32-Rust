@@ -55,33 +55,33 @@ pub const N_OUTPUT: usize = 1;
 /// Layer 1 weights W1 [8 x 5], row-major (each row = one neuron)
 pub const W1: [i8; 40] = [
     // Layer 1 weights W1 [8 x 5], row-major (each row = one neuron)
-       0,    0,    0,    0,    0,
-      66,   45,   18,   56,   -8,
-       0,    0,    0,    0,    0,
-      12,   49,  -47,  -13,  127,
-     -49,   38,    8,   -2,   24,
-      -1,   -1,   -1,    0,    0,
-       0,    0,    0,    0,    0,
-      14,  -12,   -2,    0,    0,
+      -8,   14,  -13,    3,  -32,
+      -7,   12,  -35,   95,  113,
+     127,  -58,  -16,  -45,   83,
+      44,   71,   11,   -2,  -11,
+      22,   76,   47,   59,   -5,
+      -1,   -1,   -8,  -16,    1,
+    -121,  -46,  -58,   16,   11,
+      78,   -7,   10,  -12,   -2,
 ];
 
 /// Layer 1 biases B1 [8]
 pub const B1: [i32; 8] = [
     // Layer 1 biases B1 [8]
-         -54,       15,      -67,       41,
-         -45,       21,      -27,        1,
+          -1,        2,        2,        1,
+           0,        0,        0,        2,
 ];
 
 /// Layer 2 weights W2 [1 x 8], row-major
 pub const W2: [i8; 8] = [
     // Layer 2 weights W2 [1 x 8], row-major
-       0,  -86,    0,  127,   47,    0,    0,    0,
+      -2,  -37,  127,   37,   62,   11,  -33,   63,
 ];
 
 /// Layer 2 bias B2 [1]
 pub const B2: [i32; 1] = [
     // Layer 2 bias B2 [1]
-        -140,
+          -1,
 ];
 
 // -- Feature Normalization Constants (from StandardScaler in train_simple_model.py) --

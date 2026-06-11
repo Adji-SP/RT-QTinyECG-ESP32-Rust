@@ -69,25 +69,28 @@ def quantize_layer_symmetric(weights_f32: np.ndarray) -> tuple[np.ndarray, float
 
 
 def quantize_bias_int32(bias_f32: np.ndarray, weight_scale: float,
-                         input_scale: float = 127.0) -> tuple[np.ndarray, float]:
+                         input_scale: float = 42.333) -> tuple[np.ndarray, float]:
     """
     Quantize bias to int32.
 
     Biases are quantized with the combined scale (weight_scale * input_scale).
 
     The firmware accumulates:  acc += W_q[i] * feat_q[i]
-    where feat_q lives in [-128, 127]  (per-window normalized to i8 range).
-    So the natural scale of the accumulator is:  weight_scale * 127.0
+    where feat_q = clip(z_score * 42.333, -128, 127).
+    42.333 = 127 / 3  (maps ±3 sigma of z-score → ±127).
 
-    Therefore input_scale must be 127.0, NOT 1.0.
-    Using 1.0 would under-scale the bias by 127×, making it effectively
-    negligible compared to the weight×input accumulator sum.
+    So the accumulator W_q · feat_q runs at scale:  weight_scale * 42.333
+    The bias must be quantized at the same scale to maintain the correct
+    decision boundary.
+
+    Using 127.0 here (old value for raw [-128,127] int inputs) would make
+    the bias ~3× too large, shifting the boundary and breaking inference.
 
     Args:
         bias_f32     : float32 bias vector
         weight_scale : Scale of the weight matrix for this layer
-        input_scale  : Scale of the input activations in the firmware
-                       (127.0 for i8-normalized inputs/hidden; matches firmware)
+        input_scale  : Effective scale of feat_q per unit of sklearn input.
+                       42.333 for z-score inputs scaled by 42.333 in firmware.
 
     Returns:
         (bias_int32, bias_scale)
@@ -170,8 +173,6 @@ def main():
         # MLP
         layers = extract_mlp_weights(model)
         print(f"  MLP layers : {len(layers)}")
-        for i, layer in enumerate(layers):
-            print(f"    Layer {i+1}: W={layer['W'].shape}, b={layer['b'].shape}")
     elif hasattr(model, "coef_"):
         # Logistic Regression
         layers = extract_logistic_weights(model)
@@ -181,7 +182,7 @@ def main():
         return
 
     # Quantize each layer
-    print(f"\n[quantize_weights] Quantizing weights (float32 → int8)...")
+    print("\n[quantize_weights] Quantizing weights (float32 -> int8)...")
 
     quantized_layers = []
     total_f32_bytes  = 0
@@ -192,11 +193,8 @@ def main():
         b_f32 = layer["b"]
 
         # Quantize weights.
-        # input_scale=127.0 because the firmware accumulator operates on
-        # values in [-128, 127] (per-window normalized), so the true
-        # accumulator scale is weight_scale * 127. See quantize_bias_int32().
         W_q, w_scale = quantize_layer_symmetric(W_f32)
-        b_q, b_scale = quantize_bias_int32(b_f32, w_scale, input_scale=127.0)
+        b_q, b_scale = quantize_bias_int32(b_f32, w_scale, input_scale=42.333)
 
         # Compute sizes
         f32_size = W_f32.nbytes + b_f32.nbytes
@@ -207,30 +205,17 @@ def main():
         # Quantization error
         err = quantization_error(W_f32, W_q, w_scale)
 
-        print(f"\n  Layer {i+1}:")
-        print(f"    Weight shape    : {W_f32.shape}")
-        print(f"    float32 size    : {f32_size} bytes")
-        print(f"    int8/int32 size : {q_size} bytes")
-        print(f"    Compression     : {f32_size / q_size:.2f}x")
-        print(f"    Weight scale    : {w_scale:.6f}")
-        print(f"    Max quant error : {err['max_error']:.6f}")
-        print(f"    Mean quant error: {err['mean_error']:.6f}")
-        print(f"    Relative error  : {err['relative_error']*100:.2f}%")
-
         quantized_layers.append({
             "W_q"    : W_q,
             "b_q"    : b_q,
             "w_scale": w_scale,
             "b_scale": b_scale,
+            "f32_size": f32_size,
+            "q_size"  : q_size,
+            "err"     : err,
         })
 
-    # Summary
-    print(f"\n── Quantization Summary ─────────────────────────")
-    print(f"  Total float32 size : {total_f32_bytes} bytes")
-    print(f"  Total int8/32 size : {total_q_bytes} bytes")
-    print(f"  Overall compression: {total_f32_bytes / total_q_bytes:.2f}x")
-
-    # Save as NPZ
+    # Save as NPZ FIRST (before any print that might crash on Windows CP1252)
     os.makedirs(os.path.dirname(OUTPUT_NPZ), exist_ok=True)
     save_dict = {}
     for i, ql in enumerate(quantized_layers):
@@ -238,7 +223,6 @@ def main():
         save_dict[f"b_q_{i}"]    = ql["b_q"]
         save_dict[f"w_scale_{i}"] = np.array([ql["w_scale"]])
         save_dict[f"b_scale_{i}"] = np.array([ql["b_scale"]])
-
     np.savez(OUTPUT_NPZ, **save_dict)
     print(f"\n[quantize_weights] Saved to: {OUTPUT_NPZ}")
     print("[quantize_weights] Done. Run export_rust_weights.py next.")

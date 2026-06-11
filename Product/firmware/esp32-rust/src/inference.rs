@@ -175,8 +175,10 @@ fn threshold_classify(features: &EcgFeatures) -> u8 {
 /// re-scaled ones). This guarantees Python↔firmware consistency.
 ///
 /// Bias correctness:
-///   B1 and B2 are quantized assuming input activations live in [-128, 127].
-///   So bias_scale = weight_scale × 127.0 (see quantize_weights.py).
+///   B1 and B2 are quantized with input_scale = 42.333 = 127/3.
+///   This matches Step 2: feat_q = z * 42.333, so W_q·feat_q runs at
+///   scale w_scale * 42.333. Bias must live at the same scale.
+///   (See quantize_weights.py :: quantize_bias_int32)
 fn mlp_infer(features: &EcgFeatures) -> u8 {
     // ── Step 1: Build feature vector (raw integer features) ────────────────────
     //

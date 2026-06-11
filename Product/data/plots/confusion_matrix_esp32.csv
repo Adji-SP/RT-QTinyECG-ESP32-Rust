@@ -1,5 +1,5 @@
 row,col,row_label,col_label,count
-0,0,Normal,Normal,446
-0,1,Normal,Abnormal,927
-1,0,Abnormal,Normal,656
-1,1,Abnormal,Abnormal,344
+0,0,Normal,Normal,1373
+0,1,Normal,Abnormal,0
+1,0,Abnormal,Normal,57
+1,1,Abnormal,Abnormal,943

@@ -1,18 +1,18 @@
 {
   "metrics": {
     "pc_accuracy": 0.9869363674673409,
-    "esp32_accuracy": 0.3329119258322798,
+    "esp32_accuracy": 0.9759797724399494,
     "n_samples": 2373,
-    "n_disagreements": 1552,
-    "quant_delta": 0.6540244416350611,
-    "agreement_rate": 0.3459755583649389
+    "n_disagreements": 26,
+    "quant_delta": 0.010956595027391547,
+    "agreement_rate": 0.9890434049726086
   },
   "disagreements": {
-    "n_total": 1552,
-    "n_on_normal": 927,
-    "n_on_abnormal": 625,
-    "pc_says_normal_esp32_says_abnormal": 927,
-    "pc_says_abnormal_esp32_says_normal": 625
+    "n_total": 26,
+    "n_on_normal": 0,
+    "n_on_abnormal": 26,
+    "pc_says_normal_esp32_says_abnormal": 0,
+    "pc_says_abnormal_esp32_says_normal": 26
   },
   "model_info": {
     "type": "MLPClassifier",
@@ -22,27 +22,5 @@
     "int8_bytes": 116,
     "compression_ratio": 1.9655172413793103
   },
-  "recommendations": [
-    {
-      "priority": 1,
-      "type": "FINE_TUNE",
-      "description": "Quantization delta 65.4% > 5% threshold",
-      "action": "Run fine_tune_model.py with disagreement samples, re-quantize, reflash",
-      "file": "python/fine_tune_model.py"
-    },
-    {
-      "priority": 2,
-      "type": "THRESHOLD_ADJUST",
-      "description": "ESP32 accuracy 33.3% < 85% target",
-      "action": "Adjust THRESHOLD in firmware/esp32-rust/src/inference.rs",
-      "file": "firmware/esp32-rust/src/inference.rs"
-    },
-    {
-      "priority": 3,
-      "type": "ARCHITECTURE",
-      "description": "Agreement rate 34.6% < 95% target",
-      "action": "Try larger architecture (5\u219216\u21921) or retrain with more data",
-      "file": "python/train_simple_model.py"
-    }
-  ]
+  "recommendations": []
 }
