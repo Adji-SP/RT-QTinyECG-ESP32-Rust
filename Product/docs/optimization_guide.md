@@ -298,14 +298,14 @@ quadrantChart
     title Ring Buffer Size: Latency vs Classification Quality
     x-axis "Low Quality" --> "High Quality"
     y-axis "High Latency" --> "Low Latency"
-    quadrant-1 Ideal (fast + accurate)
+    quadrant-1 Ideal: fast and accurate
     quadrant-2 Slow but accurate
     quadrant-3 Fast but inaccurate
     quadrant-4 Unusable
-    N=256 (1024ms): [0.9, 0.2]
-    N=128 Current (512ms): [0.75, 0.5]
-    N=64 (256ms): [0.5, 0.75]
-    N=32 (128ms): [0.25, 0.9]
+    N256 1024ms: [0.9, 0.2]
+    N128 Current 512ms: [0.75, 0.5]
+    N64 256ms: [0.5, 0.75]
+    N32 128ms: [0.25, 0.9]
 ```
 
 ### Detailed Tradeoff Table

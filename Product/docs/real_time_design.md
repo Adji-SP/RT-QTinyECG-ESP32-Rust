@@ -399,17 +399,17 @@ timeline
 ```mermaid
 quadrantChart
     title Design Choices: Complexity vs Performance
-    x-axis "Low Implementation Complexity" --> "High Implementation Complexity"
-    y-axis "Lower Real-Time Performance" --> "Higher Real-Time Performance"
-    quadrant-1 Complex + High perf (overkill for this project)
-    quadrant-2 Simple + High perf (ideal)
-    quadrant-3 Simple + Lower perf (current project)
-    quadrant-4 Complex + Lower perf (avoid)
-    Current design (delay loop): [0.2, 0.4]
-    Timer ISR + DMA UART: [0.8, 0.85]
+    x-axis "Low Complexity" --> "High Complexity"
+    y-axis "Lower Performance" --> "Higher Performance"
+    quadrant-1 Complex and High perf: overkill
+    quadrant-2 Simple and High perf: ideal
+    quadrant-3 Simple and Lower perf: current
+    quadrant-4 Complex and Lower perf: avoid
+    Delay loop design: [0.2, 0.4]
+    Timer ISR plus DMA UART: [0.8, 0.85]
     RTOS tasks: [0.9, 0.9]
-    Bigger MLP 5→64→1: [0.4, 0.5]
-    Current MLP 5→8→1: [0.1, 0.4]
+    Bigger MLP 5-64-1: [0.4, 0.5]
+    Current MLP 5-8-1: [0.1, 0.4]
 ```
 
 ---
