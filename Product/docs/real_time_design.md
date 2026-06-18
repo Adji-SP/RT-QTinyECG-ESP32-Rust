@@ -401,10 +401,10 @@ quadrantChart
     title Design Choices: Complexity vs Performance
     x-axis "Low Complexity" --> "High Complexity"
     y-axis "Lower Performance" --> "Higher Performance"
-    quadrant-1 Complex and High perf: overkill
-    quadrant-2 Simple and High perf: ideal
-    quadrant-3 Simple and Lower perf: current
-    quadrant-4 Complex and Lower perf: avoid
+    quadrant-1 Complex High perf overkill
+    quadrant-2 Simple High perf ideal
+    quadrant-3 Simple Lower perf current
+    quadrant-4 Complex Lower perf avoid
     Delay loop design: [0.2, 0.4]
     Timer ISR plus DMA UART: [0.8, 0.85]
     RTOS tasks: [0.9, 0.9]

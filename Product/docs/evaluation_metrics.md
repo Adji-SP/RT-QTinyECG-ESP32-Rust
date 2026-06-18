@@ -125,10 +125,10 @@ quadrantChart
     title Precision vs Recall Quadrants
     x-axis "Low Recall" --> "High Recall"
     y-axis "Low Precision" --> "High Precision"
-    quadrant-1 Ideal: detect all, no false alarms
-    quadrant-2 Conservative: few false alarms, misses some
-    quadrant-3 Unreliable: misses and false alarms
-    quadrant-4 Aggressive: catches all, many false alarms
+    quadrant-1 Ideal detect all no false alarms
+    quadrant-2 Conservative few false alarms misses some
+    quadrant-3 Unreliable misses and false alarms
+    quadrant-4 Aggressive catches all many false alarms
     PC float32: [0.917, 1.000]
     ESP32 int8: [0.892, 1.000]
 ```
