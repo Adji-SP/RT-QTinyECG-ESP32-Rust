@@ -130,8 +130,8 @@ A longer line can take **1–3 ms** — more than half the 4 ms budget.
 
 ```mermaid
 xychart-beta
-    title Effective Sample Rate vs Logging Strategy (@ 115200 baud)
-    x-axis ["No UART log", "Log every 8th sample", "Log every sample (short)", "Log every sample (long CSV)"]
+    title "Effective Sample Rate vs Logging Strategy at 115200 baud"
+    x-axis ["No UART log", "Every 8th sample", "Every sample short", "Every sample CSV"]
     y-axis "Effective rate (Hz)" 0 --> 280
     bar [250, 248, 220, 170]
 ```

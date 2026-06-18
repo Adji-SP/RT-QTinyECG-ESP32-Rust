@@ -38,8 +38,8 @@ This document explains every metric used to evaluate RT-QTinyECG-ESP32-Rust — 
 
 ```mermaid
 xychart-beta
-    title "Classification Metrics — PC float32 vs ESP32 int8"
-    x-axis ["Accuracy", "Precision", "Recall", "F1-score"]
+    title "Classification Metrics: PC float32 vs ESP32 int8"
+    x-axis ["Accuracy", "Precision", "Recall", "F1"]
     y-axis "Score" 0.85 --> 1.05
     bar [0.965, 1.000, 0.917, 0.957]
     bar [0.954, 1.000, 0.892, 0.943]
@@ -297,11 +297,16 @@ The dominant latency is the **initial window fill**, not the MLP computation. Re
 ### 6.2 Model Size Comparison
 
 ```mermaid
-xychart-beta
-    title Model Size vs Accuracy (approximate comparison)
-    x-axis ["This project\n5→8→1 int8", "5→16→1 int8", "TFLite Micro\ntypical", "ONNX Runtime\ntypical"]
-    y-axis "Flash size (bytes)" 0 --> 50000
-    bar [100, 200, 20000, 200000]
+graph LR
+    subgraph SIZES["Flash Size Comparison (approximate)"]
+        A["✅ This project\n5→8→1 int8\n~100 bytes"]
+        B["5→16→1 int8\n~200 bytes"]
+        C["TFLite Micro\n~20 KB typical"]
+        D["ONNX Runtime\n~200 KB typical"]
+    end
+    A -->|"×2"| B
+    B -->|"×100"| C
+    C -->|"×10"| D
 ```
 
 The int8 MLP at ~100 bytes is extraordinarily small — suitable for microcontrollers with as little as 8 KB flash.

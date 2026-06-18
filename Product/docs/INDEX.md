@@ -210,8 +210,8 @@ espflash flash target\xtensa-esp32s3-none-elf\release\ecg-esp32 --port COM16
 
 ```mermaid
 xychart-beta
-    title "PC float32 vs ESP32 int8 — Key Metrics"
-    x-axis ["Accuracy", "Precision", "Recall", "F1-score"]
+    title "PC float32 vs ESP32 int8: Key Metrics"
+    x-axis ["Accuracy", "Precision", "Recall", "F1"]
     y-axis "Score" 0.8 --> 1.05
     bar [0.965, 1.000, 0.917, 0.957]
     bar [0.954, 1.000, 0.892, 0.943]
