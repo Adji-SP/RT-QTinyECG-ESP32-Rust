@@ -405,11 +405,11 @@ quadrantChart
     quadrant-2 Simple High perf ideal
     quadrant-3 Simple Lower perf current
     quadrant-4 Complex Lower perf avoid
-    Delay loop design: [0.2, 0.4]
-    Timer ISR plus DMA UART: [0.8, 0.85]
-    RTOS tasks: [0.9, 0.9]
-    Bigger MLP 5-64-1: [0.4, 0.5]
-    Current MLP 5-8-1: [0.1, 0.4]
+    Delay_loop: [0.2, 0.4]
+    Timer_ISR_DMA: [0.8, 0.85]
+    RTOS_tasks: [0.9, 0.9]
+    Bigger_MLP_5-64-1: [0.4, 0.5]
+    Current_MLP_5-8-1: [0.1, 0.4]
 ```
 
 ---

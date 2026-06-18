@@ -129,8 +129,8 @@ quadrantChart
     quadrant-2 Conservative few false alarms misses some
     quadrant-3 Unreliable misses and false alarms
     quadrant-4 Aggressive catches all many false alarms
-    PC float32: [0.917, 1.000]
-    ESP32 int8: [0.892, 1.000]
+    PC_float32: [0.917, 1.000]
+    ESP32_int8: [0.892, 1.000]
 ```
 
 > [!NOTE]

@@ -302,10 +302,10 @@ quadrantChart
     quadrant-2 Slow but accurate
     quadrant-3 Fast but inaccurate
     quadrant-4 Unusable
-    N256 1024ms: [0.9, 0.2]
-    N128 Current 512ms: [0.75, 0.5]
-    N64 256ms: [0.5, 0.75]
-    N32 128ms: [0.25, 0.9]
+    N256_1024ms: [0.9, 0.2]
+    N128_512ms: [0.75, 0.5]
+    N64_256ms: [0.5, 0.75]
+    N32_128ms: [0.25, 0.9]
 ```
 
 ### Detailed Tradeoff Table
